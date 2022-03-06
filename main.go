@@ -1,7 +1,7 @@
 package main
 //------------------------------------------------------
 import (
-  "net/http"
+  //"net/http"
 	"bufio"
 	"bytes"
 	"fmt"
@@ -10,12 +10,28 @@ import (
 	"path/filepath"
   "strings"
   //"strconv"
+  "flag"
+  "github.com/valyala/fasthttp"
+  "log"
 )
 //------------------------------------------------------
-  // globalvars
+  // vars/globalvars
+  var addr = flag.String("addr", "127.0.0.1:8080",
+  	"TCP address to listen to for incoming connections")
 //------------------------------------------------------
 func main() {
-  httpServer()
+
+	flag.Parse()
+
+	s := fasthttp.Server{
+		Handler: handler,
+	}
+
+	err := s.ListenAndServe(*addr)
+	if err != nil {
+		log.Fatalf("error in ListenAndServe: %s", err)
+	}
+
 }
 //------------------------------------------------------
 func readFile(path string) ([]byte, error) {
@@ -33,7 +49,7 @@ func readFile(path string) ([]byte, error) {
 	defer file.Close()
 	return read(file)
 }
-
+//------------------------------------------------------
 func read(fd_r io.Reader) ([]byte, error) {
 	br := bufio.NewReader(fd_r)
 	var buf bytes.Buffer
@@ -56,37 +72,36 @@ func read(fd_r io.Reader) ([]byte, error) {
 	}
 	return buf.Bytes(), nil
 }
+//------------------------------------------------------
 // read zonefile func
 func readPrintZone(key string) (re []byte) {
-
     path := "./zones/" + key + ".zone"
   	ba ,err := readFile(path)
   	if err != nil {
   		fmt.Sprintln("Error: %s\n", err)
   	}
-
   return ba
-
 }
 // end read zonefile func
+// convert byte data to string data
+func BytesToString(data []byte) string {
+  return string(data[:])
+}
+// end convert byte data to string data
 //------------------------------------------------------
-func httpZone(w http.ResponseWriter, r *http.Request) {
-  fmt.Fprintf(w, "# Github: https://github.com/7xz-ru/IP-Blacklist-Generator\n")
-  fmt.Fprintf(w, "# Author: https://github.com/ZenDarkmaster\n")
-  // get url keys z param
-  keys, ok := r.URL.Query()["z"]
+func httpZone(ctx *fasthttp.RequestCtx) {
+  // author
+  ctx.WriteString("# Github: https://github.com/7xz-ru/IP-Blacklist-Generator\n")
+  ctx.WriteString("# Author: https://github.com/ZenDarkmaster\n")
+  // end author
 
-  if !ok || len(keys[0]) < 1 {
-      fmt.Fprintf(w, "Url Param 'z' is missing")
-      return
-  }
-    // Query()["key"] will return an array of items,
-    // we only want the single item.
-  key := keys[0]
+  // get url keys z param
+  keys := ctx.QueryArgs().Peek("z")
+  key := BytesToString(keys)
   // end get url keys z param
 
   //zones list
-  fmt.Fprintf(w, "# Feed zones: " + string(key) + "\n")
+  ctx.WriteString("# Feed zones: " + string(key) + "\n")
   //end zones list
 
   // string key to array words
@@ -96,15 +111,14 @@ func httpZone(w http.ResponseWriter, r *http.Request) {
   // start array cycle and print zonefile
   for i := 0; i < len(words); i++ {
       mkey := words[i]
-      fmt.Fprintf(w, "# Zone - %s: \n%s", mkey, readPrintZone(mkey))
+      fmt.Fprintf(ctx, "# Zone - %s: \n%s", mkey, readPrintZone(mkey))
   }
   // end start array cycle and print zonefile
 }
 //------------------------------------------------------
-func httpServer() {
-  http.HandleFunc("/ipfeed", httpZone)
-  http.ListenAndServe(":8080", nil)
+func handler(ctx *fasthttp.RequestCtx) {
+	httpZone(ctx)
 }
 //------------------------------------------------------
-// for example, open the page, to add zones, use the z parameter in the url
-// example: http://localhost:8080/ipfeed?z=gb+it+fr
+// For example, open the page, to add zones, use the z parameter in the url
+// Example: http://localhost:8080/?z=gb+it+fr
