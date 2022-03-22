@@ -116,9 +116,21 @@ func httpZone(ctx *fasthttp.RequestCtx) {
   // end start array cycle and print zonefile
 }
 //------------------------------------------------------
+//func handler(ctx *fasthttp.RequestCtx) {
+//	httpZone(ctx)
+//}
+
 func handler(ctx *fasthttp.RequestCtx) {
-	httpZone(ctx)
+	switch string(ctx.Path()) {
+	case "/":
+		httpZone(ctx)
+	case "/feed":
+		httpZone(ctx)
+	default:
+		ctx.Error("Unsupported path", fasthttp.StatusNotFound)
+	}
 }
+
 //------------------------------------------------------
 // For example, open the page, to add zones, use the z parameter in the url
 // Example: http://localhost:8080/?z=gb+it+fr
