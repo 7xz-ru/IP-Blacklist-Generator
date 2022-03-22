@@ -132,5 +132,7 @@ func handler(ctx *fasthttp.RequestCtx) {
 }
 
 //------------------------------------------------------
+// # go build main.go
+// # ./main -addr 127.0.0.1:8080
 // For example, open the page, to add zones, use the z parameter in the url
 // Example: http://localhost:8080/?z=gb+it+fr
